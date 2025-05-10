@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>Grand Fortuna</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #000;
+      color: gold;
+      font-family: sans-serif;
+      text-align: center;
+      max-width: 100vw;
+      overflow-x: hidden;
+    }
+
+    /* Загрузка */
+    #loading-screen {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: black;
+      color: gold;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    #loading-title {
+      font-size: 32px;
+      margin-bottom: 20px;
+    }
+    #progress-container {
+      width: 80%;
+      height: 12px;
+      background-color: #333;
+      border: 1px solid gold;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    #progress-bar {
+      height: 100%;
+      width: 0%;
+      background-color: gold;
+      transition: width 0.3s;
+    }
+
+    #main-content { display: none; }
+
+    h1 {
+      background: gold;
+      color: black;
+      padding: 10px;
+    }
+    .balance, .bonus-timer {
+      margin: 10px;
+      font-size: 18px;
+    }
+    .slot-machine {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin: 20px;
+    }
+    .slot {
+      width: 70px;
+      height: 70px;
+      line-height: 70px;
+      font-size: 40px;
+      border: 3px solid gold;
+      border-radius: 10px;
+      background: black;
+      box-shadow: 0 0 10px gold;
+    }
+    .controls, .promo {
+      margin: 15px;
+    }
+    input[type="number"], input[type="text"] {
+      padding: 5px;
+      font-size: 16px;
+      width: 140px;
+    }
+    button {
+      padding: 10px 20px;
+      background: gold;
+      color: black;
+      font-weight: bold;
+      border: none;
+      cursor: pointer;
+      font-size: 16px;
+      margin: 5px;
+    }
+    .spinning {
+      animation: spin 0.2s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotateX(0deg); }
+      100% { transform: rotateX(360deg); }
+    }
+
+    #crashGame {
+      display: none;
+      position: fixed;
+      z-index: 10000;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: black;
+      color: gold;
+      padding: 20px;
+      text-align: center;
+    }
+
+    /* Кастомные уведомления */
+    .notify {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: black;
+      color: gold;
+      border: 2px solid gold;
+      padding: 15px 20px;
+      z-index: 20000;
+      font-size: 16px;
+      max-width: 90%;
+      border-radius: 8px;
+      box-shadow: 0 0 10px gold;
+    }
+    .notify .close {
+      position: absolute;
+      right: 8px;
+      top: 4px;
+      color: gold;
+      font-weight: bold;
+      font-size: 18px;
+      cursor: pointer;
+    }
+
+    .social-buttons {
+      margin-top: 20px;
+    }
+    .social-buttons a {
+      text-decoration: none;
+      margin: 10px;
+      padding: 10px 20px;
+      background-color: gold;
+      color: black;
+      border-radius: 8px;
+      font-weight: bold;
+      display: inline-block;
+    }
+  </style>
+</head>
+<body>
+
+<div id="loading-screen">
+  <div id="loading-title">Grand Fortuna</div>
+  <div id="progress-container"><div id="progress-bar"></div></div>
+</div>
+
+<div id="main-content">
+  <h1>Grand Fortuna</h1>
+  <div class="balance">Баланс: $<span id="balance">5000</span></div>
+  <div class="bonus-timer">
+    Часовой бонус через: <span id="timer">00:00:00</span><br>
+    <button id="bonusButton">Получить бонус</button>
+  </div>
+
+  <div class="controls">
+    <button id="gameSelectButton">Выбрать игру</button>
+  </div>
+
+  <!-- Выбор игры -->
+  <div id="gameSelection" style="display:none;">
+    <button id="slotsButton">Слоты</button>
+    <button id="crashButton">Краш</button>
+  </div>
+
+  <!-- Слоты -->
+  <div class="slot-machine" id="slotMachine">
+    <div class="slot" id="slot1">🍒</div>
+    <div class="slot" id="slot2">🍒</div>
+    <div class="slot" id="slot3">🍒</div>
+  </div>
+
+  <div class="controls">
+    <input type="number" id="bet" placeholder="Ставка" min="1" />
+    <button id="spinButton">Крутить</button>
+  </div>
+
+  <!-- Краш игра -->
+  <div id="crashGame" style="display:none;">
+    <h2>CRASH GAME</h2>
+    <div>Коэффициент: <span id="crashMultiplier">1.00</span>x</div>
+    <div style="margin:10px 0;">
+      <input type="number" id="crashBet" placeholder="Ставка" min="1" style="width:100px; padding:5px;" />
+    </div>
+    <div id="crashButtons"><button id="startCrash">Старт</button></div>
+    <div style="margin-top:20px;"><button onclick="closeCrash()">Назад</button></div>
+  </div>
+
+  <!-- Социальные сети -->
+  <div class="social-buttons">
+    <a href="https://t.me/your_telegram_channel_1" target="_blank">Мы в Telegram 1</a>
+    <a href="https://t.me/your_telegram_channel_2" target="_blank">Мы в Telegram 2</a>
+  </div>
+</div>
+
+<script>
+  var emojis = ["🍒", "🍋", "🍇", "🔔", "⭐"];
+  var winChance = 0.6;
+  var promoCodes = { "LUCKY1000": 1000, "GOLD500": 500, "VIP777": 777 };
+
+  var balance = parseInt(localStorage.getItem('balance')) || 5000;
+  var lastBonus = parseInt(localStorage.getItem('lastBonus')) || 0;
+  var usedPromos = JSON.parse(localStorage.getItem('usedPromos') || '[]');
+
+  var balanceEl, betEl, timerEl, bonusButton, spinButton, promoInput, promoButton, slots;
+
+  var progress = 0;
+  var loadingInterval = setInterval(function () {
+    progress += 2;
+    if (progress > 100) progress = 100;
+    document.getElementById('progress-bar').style.width = progress + '%';
+    if (progress === 100) {
+      clearInterval(loadingInterval);
+      document.getElementById('loading-screen').style.display = 'none';
+      document.getElementById('main-content').style.display = 'block';
+      initGame();
+    }
+  }, 50);
+
+  function showNotify(msg) {
+    var note = document.createElement('div');
+    note.className = 'notify';
+    note.innerHTML = '<div class="close" onclick="this.parentNode.remove()">×</div>' + msg;
+    document.body.appendChild(note);
+  }
+
+  function initGame() {
+    balanceEl = document.getElementById('balance');
+    betEl = document.getElementById('bet');
+    timerEl = document.getElementById('timer');
+    bonusButton = document.getElementById('bonusButton');
+    spinButton = document.getElementById('spinButton');
+    promoInput = document.getElementById('promoInput');
+    promoButton = document.getElementById('promoButton');
+    slots = [document.getElementById('slot1'), document.getElementById('slot2'), document.getElementById('slot3')];
+
+    updateBalanceDisplay();
+    updateBonusTimer();
+    setInterval(updateBonusTimer, 1000);
+
+    bonusButton.onclick = claimBonus;
+    spinButton.onclick = spin;
+    document.getElementById('gameSelectButton').onclick = showGameSelection;
+    document.getElementById('slotsButton').onclick = startSlots;
+    document.getElementById('crashButton').onclick = openCrash;
+    document.getElementById('startCrash').onclick = startCrash;
+  }
+
+  function showGameSelection() {
+    document.getElementById('gameSelection').style.display = 'block';
+  }
+
+  function startSlots() {
+    document.getElementById('gameSelection').style.display = 'none';
+    document.getElementById('slotMachine').style.display = 'flex';
+    document.getElementById('crashGame').style.display = 'none';
+  }
+
+  function openCrash() {
+    document.getElementById('gameSelection').style.display = 'none';
+    document.getElementById('slotMachine').style.display = 'none';
+    document.getElementById('crashGame').style.display = 'block';
+  }
+
+  function updateBalanceDisplay() {
+    balanceEl.textContent = balance;
+    localStorage.setItem('balance', balance);
+  }
+
+  function claimBonus() {
+    var now = Date.now();
+    if (now - lastBonus >= 3600000) {
+      balance += 1000;
+      lastBonus = now;
+      localStorage.setItem('lastBonus', lastBonus);
+      updateBalanceDisplay();
+      showNotify("Бонус получен! +$1000");
+    } else {
+      showNotify("Бонус пока недоступен.");
+    }
+  }
+
+  function updateBonusTimer() {
+    var now = Date.now();
+    var diff = 3600000 - (now - lastBonus);
+    if (diff <= 0) {
+      timerEl.textContent = "00:00:00";
+      bonusButton.disabled = false;
+    } else {
+      var h = Math.floor(diff / 3600000);
+      var m = Math.floor((diff % 3600000) / 60000);
+      var s = Math.floor((diff % 60000) / 1000);
+      timerEl.textContent = pad(h) + ":" + pad(m) + ":" + pad(s);
+      bonusButton.disabled = true;
+    }
+  }
+
+  function pad(n) { return n < 10 ? '0' + n : n; }
+
+  function randEmoji() {
+    return emojis[Math.floor(Math.random() * emojis.length)];
+  }
+
+  function spin() {
+    var bet = parseInt(betEl.value);
+    if (!bet || bet <= 0 || bet > balance) {
+      showNotify("Неверная ставка!");
+      return;
+    }
+
+    balance -= bet;
+    updateBalanceDisplay();
+
+    for (var i = 0; i < slots.length; i++) {
+      slots[i].className += " spinning";
+      slots[i].textContent = randEmoji();
+    }
+
+    setTimeout(function () {
+      for (var i = 0; i < slots.length; i++) {
+        slots[i].className = slots[i].className.replace("spinning", "").trim();
+      }
+
+      var isWin = Math.random() < winChance;
+      var result;
+      if (isWin) {
+        var symbol = randEmoji();
+        result = [symbol, symbol, symbol];
+        balance += bet * 2;
+        showNotify("Вы выиграли $" + (bet * 2));
+      } else {
+        do {
+          result = [randEmoji(), randEmoji(), randEmoji()];
+        } while (result[0] === result[1] || result[0] === result[2]);
+        showNotify("Вы проиграли.");
+      }
+
+      for (var i = 0; i < slots.length; i++) {
+        slots[i].textContent = result[i];
+      }
+
+      updateBalanceDisplay();
+    }, 2000);
+  }
+
+  function startCrash() {
+    var bet = parseInt(document.getElementById('crashBet').value);
+    if (!bet || bet <= 0 || bet > balance) {
+      showNotify("Неверная ставка!");
+      return;
+    }
+
+    balance -= bet;
+    updateBalanceDisplay();
+
+    var multiplier = 1;
+    var crashInterval = setInterval(function () {
+      multiplier += 0.05;
+      document.getElementById('crashMultiplier').textContent = multiplier.toFixed(2) + "x";
+      if (Math.random() < 0.1) {
+        clearInterval(crashInterval);
+        showNotify("Игра окончена, Вы проиграли.");
+        updateBalanceDisplay();
+      }
+    }, 100);
+  }
+
+  function closeCrash() {
+    document.getElementById('crashGame').style.display = 'none';
+    document.getElementById('gameSelection').style.display = 'block';
+  }
+</script>
+
+</body>
+</html>
+
+
