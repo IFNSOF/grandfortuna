@@ -3,7 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <meta name="theme-color" content="#000000">
+  <link rel="icon" href="favicon.ico">
   <title>Grand Fortuna</title>
+  <link rel="manifest" href="/manifest.json">
   <style>
     html, body {
       margin: 0;
@@ -196,7 +199,10 @@
     <div style="margin:10px 0;">
       <input type="number" id="crashBet" placeholder="Ставка" min="1" style="width:100px; padding:5px;" />
     </div>
-    <div id="crashButtons"><button id="startCrash">Старт</button></div>
+    <div id="crashButtons">
+      <button id="startCrash">Старт</button>
+      <button id="collectButton" style="display:none;">Собрать</button>
+    </div>
     <div style="margin-top:20px;"><button onclick="closeCrash()">Назад</button></div>
   </div>
 
@@ -216,7 +222,7 @@
   var lastBonus = parseInt(localStorage.getItem('lastBonus')) || 0;
   var usedPromos = JSON.parse(localStorage.getItem('usedPromos') || '[]');
 
-  var balanceEl, betEl, timerEl, bonusButton, spinButton, promoInput, promoButton, slots;
+  var balanceEl, betEl, timerEl, bonusButton, spinButton, promoInput, promoButton, slots, crashMultiplierEl, collectButton;
 
   var progress = 0;
   var loadingInterval = setInterval(function () {
@@ -247,6 +253,8 @@
     promoInput = document.getElementById('promoInput');
     promoButton = document.getElementById('promoButton');
     slots = [document.getElementById('slot1'), document.getElementById('slot2'), document.getElementById('slot3')];
+    crashMultiplierEl = document.getElementById('crashMultiplier');
+    collectButton = document.getElementById('collectButton');
 
     updateBalanceDisplay();
     updateBonusTimer();
@@ -258,6 +266,7 @@
     document.getElementById('slotsButton').onclick = startSlots;
     document.getElementById('crashButton').onclick = openCrash;
     document.getElementById('startCrash').onclick = startCrash;
+    collectButton.onclick = collectCrashWin;
   }
 
   function showGameSelection() {
@@ -332,32 +341,23 @@
 
     setTimeout(function () {
       for (var i = 0; i < slots.length; i++) {
-        slots[i].className = slots[i].className.replace("spinning", "").trim();
+        slots[i].classList.remove("spinning");
       }
 
-      var isWin = Math.random() < winChance;
-      var result;
-      if (isWin) {
-        var symbol = randEmoji();
-        result = [symbol, symbol, symbol];
-        balance += bet * 2;
-        showNotify("Вы выиграли $" + (bet * 2));
+      var result = slots.map(slot => slot.textContent);
+      if (result[0] === result[1] && result[0] === result[2]) {
+        var winAmount = bet * 2;
+        balance += winAmount;
+        updateBalanceDisplay();
+        showNotify("Поздравляем! Вы выиграли $" + winAmount);
       } else {
-        do {
-          result = [randEmoji(), randEmoji(), randEmoji()];
-        } while (result[0] === result[1] || result[0] === result[2]);
-        showNotify("Вы проиграли.");
+        showNotify("Вы проиграли. Попробуйте снова.");
       }
-
-      for (var i = 0; i < slots.length; i++) {
-        slots[i].textContent = result[i];
-      }
-
-      updateBalanceDisplay();
-    }, 2000);
+    }, 1000);
   }
 
   function startCrash() {
+    collectButton.style.display = 'none';
     var bet = parseInt(document.getElementById('crashBet').value);
     if (!bet || bet <= 0 || bet > balance) {
       showNotify("Неверная ставка!");
@@ -367,16 +367,25 @@
     balance -= bet;
     updateBalanceDisplay();
 
-    var multiplier = 1;
+    var multiplier = 1.00;
     var crashInterval = setInterval(function () {
-      multiplier += 0.05;
-      document.getElementById('crashMultiplier').textContent = multiplier.toFixed(2) + "x";
-      if (Math.random() < 0.1) {
+      multiplier += Math.random() * 0.02;
+      crashMultiplierEl.textContent = multiplier.toFixed(2);
+
+      if (Math.random() < 0.05) {
         clearInterval(crashInterval);
-        showNotify("Игра окончена, Вы проиграли.");
-        updateBalanceDisplay();
+        showNotify("Вы проиграли! Коэффициент: " + multiplier.toFixed(2));
       }
-    }, 100);
+    }, 1000);
+  }
+
+  function collectCrashWin() {
+    var multiplier = parseFloat(crashMultiplierEl.textContent);
+    var bet = parseInt(document.getElementById('crashBet').value);
+    balance += bet * multiplier;
+    updateBalanceDisplay();
+    showNotify("Вы собрали! Ваш выигрыш: $" + (bet * multiplier).toFixed(2));
+    collectButton.style.display = 'none';
   }
 
   function closeCrash() {
@@ -384,7 +393,6 @@
     document.getElementById('gameSelection').style.display = 'block';
   }
 </script>
-
 </body>
 </html>
 
