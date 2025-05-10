@@ -203,7 +203,15 @@
       <button id="startCrash">Старт</button>
       <button id="collectButton" style="display:none;">Собрать</button>
     </div>
-    <div style="margin-top:20px;"><button onclick="closeCrash()">Назад</button></div>
+    <div style="margin-top:20px;">
+      <button onclick="closeCrash()">Назад</button>
+    </div>
+  </div>
+
+  <!-- Промокод -->
+  <div class="promo">
+    <input type="text" id="promoInput" placeholder="Введите промокод" />
+    <button id="promoButton">Активировать промокод</button>
   </div>
 
   <!-- Социальные сети -->
@@ -267,6 +275,7 @@
     document.getElementById('crashButton').onclick = openCrash;
     document.getElementById('startCrash').onclick = startCrash;
     collectButton.onclick = collectCrashWin;
+    promoButton.onclick = activatePromo;
   }
 
   function showGameSelection() {
@@ -281,71 +290,26 @@
 
   function openCrash() {
     document.getElementById('gameSelection').style.display = 'none';
-    document.getElementById('slotMachine').style.display = 'none';
     document.getElementById('crashGame').style.display = 'block';
-  }
-
-  function updateBalanceDisplay() {
-    balanceEl.textContent = balance;
-    localStorage.setItem('balance', balance);
-  }
-
-  function claimBonus() {
-    var now = Date.now();
-    if (now - lastBonus >= 3600000) {
-      balance += 1000;
-      lastBonus = now;
-      localStorage.setItem('lastBonus', lastBonus);
-      updateBalanceDisplay();
-      showNotify("Бонус получен! +$1000");
-    } else {
-      showNotify("Бонус пока недоступен.");
-    }
-  }
-
-  function updateBonusTimer() {
-    var now = Date.now();
-    var diff = 3600000 - (now - lastBonus);
-    if (diff <= 0) {
-      timerEl.textContent = "00:00:00";
-      bonusButton.disabled = false;
-    } else {
-      var h = Math.floor(diff / 3600000);
-      var m = Math.floor((diff % 3600000) / 60000);
-      var s = Math.floor((diff % 60000) / 1000);
-      timerEl.textContent = pad(h) + ":" + pad(m) + ":" + pad(s);
-      bonusButton.disabled = true;
-    }
-  }
-
-  function pad(n) { return n < 10 ? '0' + n : n; }
-
-  function randEmoji() {
-    return emojis[Math.floor(Math.random() * emojis.length)];
   }
 
   function spin() {
     var bet = parseInt(betEl.value);
-    if (!bet || bet <= 0 || bet > balance) {
+    if (bet <= 0 || bet > balance) {
       showNotify("Неверная ставка!");
       return;
     }
-
     balance -= bet;
     updateBalanceDisplay();
 
-    for (var i = 0; i < slots.length; i++) {
-      slots[i].className += " spinning";
-      slots[i].textContent = randEmoji();
-    }
+    slots.forEach(slot => {
+      slot.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+      slot.classList.add('spinning');
+    });
 
-    setTimeout(function () {
-      for (var i = 0; i < slots.length; i++) {
-        slots[i].classList.remove("spinning");
-      }
-
-      var result = slots.map(slot => slot.textContent);
-      if (result[0] === result[1] && result[0] === result[2]) {
+    setTimeout(() => {
+      slots.forEach(slot => slot.classList.remove('spinning'));
+      if (slots[0].textContent === slots[1].textContent && slots[0].textContent === slots[2].textContent) {
         var winAmount = bet * 2;
         balance += winAmount;
         updateBalanceDisplay();
@@ -354,6 +318,57 @@
         showNotify("Вы проиграли. Попробуйте снова.");
       }
     }, 1000);
+  }
+
+  function updateBalanceDisplay() {
+    balanceEl.textContent = balance.toFixed(2);
+    localStorage.setItem('balance', balance);
+  }
+
+  function updateBonusTimer() {
+    var now = Date.now();
+    var remainingTime = 24 * 60 * 60 * 1000 - (now - lastBonus);
+    if (remainingTime <= 0) {
+      lastBonus = now;
+      remainingTime = 24 * 60 * 60 * 1000;
+      localStorage.setItem('lastBonus', lastBonus);
+      showNotify("Вы можете забрать бонус!");
+    }
+    var hours = Math.floor(remainingTime / (1000 * 60 * 60));
+    var minutes = Math.floor((remainingTime % (1000 * 60 * 60)) / (1000 * 60));
+    var seconds = Math.floor((remainingTime % (1000 * 60)) / 1000);
+    timerEl.textContent = `${hours}:${minutes}:${seconds}`;
+  }
+
+  function claimBonus() {
+    if (Date.now() - lastBonus >= 24 * 60 * 60 * 1000) {
+      balance += 500;
+      lastBonus = Date.now();
+      localStorage.setItem('lastBonus', lastBonus);
+      updateBalanceDisplay();
+      showNotify("Вы получили бонус $500!");
+    } else {
+      showNotify("Бонус доступен раз в 24 часа.");
+    }
+  }
+
+  function activatePromo() {
+    var promoCode = promoInput.value.trim().toUpperCase();
+    if (promoCodes[promoCode] && !usedPromos.includes(promoCode)) {
+      balance += promoCodes[promoCode];
+      usedPromos.push(promoCode);
+      localStorage.setItem('usedPromos', JSON.stringify(usedPromos));
+      updateBalanceDisplay();
+      showNotify("Промокод активирован! Вы получили $" + promoCodes[promoCode]);
+    } else {
+      showNotify("Неверный или уже использованный промокод.");
+    }
+    promoInput.value = '';
+  }
+
+  function closeCrash() {
+    document.getElementById('crashGame').style.display = 'none';
+    document.getElementById('gameSelection').style.display = 'block';
   }
 
   function startCrash() {
@@ -387,12 +402,8 @@
     showNotify("Вы собрали! Ваш выигрыш: $" + (bet * multiplier).toFixed(2));
     collectButton.style.display = 'none';
   }
-
-  function closeCrash() {
-    document.getElementById('crashGame').style.display = 'none';
-    document.getElementById('gameSelection').style.display = 'block';
-  }
 </script>
+
 </body>
 </html>
 
